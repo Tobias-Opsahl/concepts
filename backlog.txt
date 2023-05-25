@@ -1,0 +1,9 @@
+# TODO
+
+- Save concept labels when creating datasets
+- Make hparams in cav
+- Allow for more linear models in cav
+- Allow for many concept and bottlenecks in cav
+- Make dataset with 10 outputs, try bottlenck layer before to check concepts.
+- Make function to deal with tfds / numpy arrays
+- Make function to read and preprocess the saved datasets

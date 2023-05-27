@@ -106,7 +106,8 @@ def _load_mnist_generic(dataset, path="data/", normalize=False, validation_split
         return (train_data, train_labels), (test_data, test_labels)
 
 
-def load_concept_data(filename, path="data/new_data/", normalize=False, validation_split=False, val_size=0.2):
+def load_concept_data(filename, path="data/new_data/", normalize=False, reshape=False,
+                      validation_split=False, val_size=0.2):
     """
     Loads and returns one of the concepts dataset in new_data.
     This consits of a train, optinal validation, and test set, with both the x_data, y_data and concepts-dictionary.
@@ -116,6 +117,7 @@ def load_concept_data(filename, path="data/new_data/", normalize=False, validati
         filename (str): Name of dataset to load. Must be a pickle file and contain the ".pkl".
         path (str, optional): Path to the folder where the data is stored. Defaults to "data/new_data/".
         normalize (bool, optional): If True, scales pixels down to be between [0, 1].
+        reshape (bool, optional): If True, reshapes from [n, 784] to [n, 28, 28, 1].
         validation_split (bool, optional): If True, will split the training set into train and validation set.
             This means that both the x_data, y_data, and all of the concepts will be split. The proportion
             is determined by `val_size`.
@@ -142,8 +144,12 @@ def load_concept_data(filename, path="data/new_data/", normalize=False, validati
         concepts_test = data_dict["concepts_test"]
 
     if normalize:  # Pixels are between 0 and 255, so simply dividing by 255 turn pixels into [0, 1]
-        train_data = train_data / 255
-        test_data = test_data / 255
+        x_test = x_test / 255
+        x_test = x_test / 255
+
+    if reshape:
+        x_train = x_train.reshape(-1, 28, 28, 1)
+        x_test = x_test.reshape(-1, 28, 28, 1)
 
     if not validation_split:  # Return only train and test
         return (x_train, y_train, concepts_train), (x_test, y_test, concepts_test)

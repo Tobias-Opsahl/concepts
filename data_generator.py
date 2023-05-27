@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 
-from data_loaders import load_mnist, load_fashion_mnist, _load_mnist_generic
+from data_loaders import load_mnist, load_fashion_mnist, _load_mnist_generic, load_concept_data
 from data_visualizer import *
 
 
@@ -40,13 +40,14 @@ def saturate_images(x_data, indices=None, threshold=127):
         threshold (float): The threshold of where to saturate the pixels.
 
     Returns:
-        x_data (np.array): [n x m] data matrix, where the images of interest are saturated.
+        new_x (np.array): [n x m] data matrix, where the images of interest are saturated.
     """
     if indices is not None:  # Index only indices of interest
-        x_data[indices] = np.where(x_data[indices] > threshold, 255, 0)
+        new_x = x_data.copy()
+        new_x[indices] = np.where(x_data[indices] > threshold, 255, 0)
     else:
-        x_data = np.where(x_data > threshold, 255, 0)  # Set pixels over threshold to be 255
-    return x_data
+        new_x = np.where(x_data > threshold, 255, 0)  # Set pixels over threshold to be 255
+    return new_x
 
 
 def create_normal_3_5(filename="normal_3_5", read_path="data/", write_path="data/new_data/"):
@@ -125,16 +126,77 @@ def create_partial_saturated_3_5(split=0.8, filename="partial", read_path="data/
     test_indices = test_indices.astype(int)
     data_dict = {"x_train": x_train, "y_train": y_train, "x_test": x_test, "y_test": y_test,
                  "concepts_train": {"saturated": train_indices}, "concepts_test": {"saturated": test_indices}}
-    total_filename = write_path + filename + str(int(split * 100)) + "_3_5.pkl"
+    total_filename = write_path + filename + str(int(split * 100)) + "_3_5.pkl"  # Make filename
+    with open(total_filename, "wb") as outfile:  # Write the dataset
+        pickle.dump(data_dict, outfile)
+
+
+def create_normal_10(filename="normal_10", read_path="data/", write_path="data/new_data/"):
+    """
+    Creates a normal dataset from MNIST, the same as MNIST just at the file format as the other files.
+
+    Arguments:
+        filename (str): The filename of the pickle to save.
+        read_path (str): The path to read the (MNIST) data from.
+        write_path (str): The path to write the new data to.
+    """
+    np.random.seed(57)
+    (x_train, y_train), (x_test, y_test) = load_mnist(path=read_path, normalize=False, validation_split=False)
+    data_dict = {"x_train": x_train, "y_train": y_train, "x_test": x_test, "y_test": y_test,
+                 "concepts_train": {}, "concepts_test": {}}
+    with open(write_path + filename + ".pkl", "wb") as outfile:
+        pickle.dump(data_dict, outfile)
+
+
+def create_saturated10(split=0.8, filename="partial", read_path="data/", write_path="data/new_data/"):
+    """
+    Creates a dataset from MNIST, where partially every odd number is saturated, and every even number is not.
+    `split` marks how many that are saturated this way, 1 - `split` are flipped.
+
+    Arguments:
+        split (float): Float between 0 and 1 that determined the ratio of saturated odd digits,
+            and 1 - `split` saturated even digits.
+        filename (str): The filename of the pickle to save.
+        read_path (str): The path to read the (MNIST) data from.
+        write_path (str): The path to write the new data to.
+    """
+    np.random.seed(57)  # Set seed
+    (x_train, y_train), (x_test, y_test) = load_mnist(path=read_path, normalize=False, validation_split=False)
+
+    # First mark every digit that is a 3:
+    train_indices = np.isin(y_train, [1, 3, 5, 7, 9])
+    test_indices = np.isin(y_test, [1, 3, 5, 7, 9])
+    # Then randomly flip 20% of the indices to create some noise:
+    n_train = len(train_indices)
+    n_test = len(test_indices)
+    flip_indices_train = np.random.choice(n_train, int(n_train * (1 - split)), replace=False)  # Indices to flip
+    flip_indices_test = np.random.choice(n_test, int(n_test * (1 - split)), replace=False)
+    train_indices[flip_indices_train] = np.logical_not(train_indices[flip_indices_train])  # Flip the indices
+    test_indices[flip_indices_test] = np.logical_not(test_indices[flip_indices_test])
+    x_train = saturate_images(x_train, train_indices, threshold=127)  # Saturate the indices found
+    x_test = saturate_images(x_test, test_indices, threshold=127)
+    train_indices = train_indices.astype(int)  # Convert indices to int for the dataset
+    test_indices = test_indices.astype(int)
+    data_dict = {"x_train": x_train, "y_train": y_train, "x_test": x_test, "y_test": y_test,
+                 "concepts_train": {"saturated": train_indices}, "concepts_test": {"saturated": test_indices}}
+    total_filename = write_path + filename + str(int(split * 100)) + "_10.pkl"  # Make filename
     with open(total_filename, "wb") as outfile:  # Write the dataset
         pickle.dump(data_dict, outfile)
 
 
 if __name__ == "__main__":
-    create_normal_3_5()
-    create_saturated_3_5()
-    create_partial_saturated_3_5(0.8)
-    create_partial_saturated_3_5(0.90)
-    create_partial_saturated_3_5(0.95)
+    # create_normal_3_5()
+    # create_saturated_3_5()
+    # create_partial_saturated_3_5(0.5)
+    # create_partial_saturated_3_5(0.90)
+    # create_partial_saturated_3_5(0.95)
+    # create_saturated10(0.5)
+    # create_saturated10(0.9)
+    create_saturated10(0.95)
+    # create_saturated10(1)
     # from IPython import embed
     # embed()
+    create_normal_10()
+    # (x_train, y_train, c_train), (x_test, y_test, c_test) = load_concept_data("partial90_10.pkl")
+    # plot_mnist_random(x_train, labels=y_train, n_random=20)
+    pass
